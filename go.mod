@@ -1,4 +1,4 @@
-module go-common
+module github.com/findById/go-common
 
 go 1.15
 
