@@ -20,15 +20,15 @@ const (
 )
 
 type Robot struct {
-	Token  string
-	Secret string
+	token  string
+	secret string
 	debug  bool
 }
 
 func NewRobot(token, secret string, debug bool) *Robot {
 	return &Robot{
-		Token:  token,
-		Secret: secret,
+		token:  token,
+		secret: secret,
 		debug:  debug,
 	}
 }
@@ -42,13 +42,13 @@ func hmacSha256(message string, secret string) string {
 
 func (robot *Robot) sendRobotMessage(message string) error {
 	var url string
-	if robot.Secret != "" {
+	if robot.secret != "" {
 		ts := time.Now().UnixNano() / 1e6
-		sign := hmacSha256(fmt.Sprint(ts, "\n", robot.Secret), robot.Secret)
+		sign := hmacSha256(fmt.Sprint(ts, "\n", robot.secret), robot.secret)
 		temp := fmt.Sprintf("&timestamp=%v&sign=%v", ts, sign)
-		url = fmt.Sprint(RobotSendAPI, robot.Token, temp)
+		url = fmt.Sprint(RobotSendAPI, robot.token, temp)
 	} else {
-		url = fmt.Sprint(RobotSendAPI, robot.Token)
+		url = fmt.Sprint(RobotSendAPI, robot.token)
 	}
 
 	req, err := http.NewRequest("POST", url, strings.NewReader(message))
@@ -62,6 +62,7 @@ func (robot *Robot) sendRobotMessage(message string) error {
 		return err
 	}
 	_, err = io.Copy(os.Stderr, res.Body)
+	fmt.Println()
 	return err
 }
 
@@ -94,6 +95,50 @@ func (robot *Robot) SendTextMessage(data map[string]string) error {
 		}`
 		mobiles := fmt.Sprintf(`["%v"]`, strings.Join(strings.Split(at, ","), `","`)) // (1,1) to (["1","1"])
 		msg = fmt.Sprintf(msg, content, mobiles)
+	}
+	if !robot.debug {
+		err := robot.sendRobotMessage(msg)
+		if err != nil {
+			return err
+		}
+	} else {
+		return errors.New(msg)
+	}
+	return nil
+}
+
+func (robot *Robot) SendMarkdownMessage(data map[string]string) error {
+	title := data["title"]
+	content := data["content"]
+	at := data["at"]
+
+	var msg string
+	if at == "true" || at == "all" {
+		msg = `{
+			"msgtype":"markdown",
+			"title":"%v",
+			"text":{
+				"content":"%v"
+			},
+			"at":{
+				"isAtAll":%v
+			}
+		}`
+		msg = fmt.Sprintf(msg, title, content, true)
+	} else {
+		msg = `{
+			"msgtype":"markdown",
+			"title":"%v",
+			"text":{
+				"content":"%v"
+			},
+			"at":{
+				"atMobiles":%v,
+				"isAtAll":false
+			}
+		}`
+		mobiles := fmt.Sprintf(`["%v"]`, strings.Join(strings.Split(at, ","), `","`)) // (1,1) to (["1","1"])
+		msg = fmt.Sprintf(msg, title, content, mobiles)
 	}
 	if !robot.debug {
 		err := robot.sendRobotMessage(msg)
