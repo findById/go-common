@@ -3,11 +3,12 @@ package util
 import "sync"
 
 type Future struct {
-	wg      sync.WaitGroup
-	mutex   sync.RWMutex
-	queue   []func()
-	workers []func()
-	started bool
+	wg          sync.WaitGroup
+	mutex       sync.RWMutex
+	beforeQueue []func()
+	queue       []func()
+	workers     []func()
+	started     bool
 }
 
 func NewFuture() *Future {
@@ -21,7 +22,11 @@ func (f *Future) Then(worker func()) *Future {
 		panic("worker started")
 	}
 	f.mutex.Lock()
-	f.queue = append(f.queue, worker)
+	if f.workers == nil || len(f.workers) <= 0 {
+		f.beforeQueue = append(f.beforeQueue, worker)
+	} else {
+		f.queue = append(f.queue, worker)
+	}
 	f.mutex.Unlock()
 	return f
 }
@@ -41,6 +46,11 @@ func (f *Future) Do() {
 	defer func() {
 		f.started = false
 	}()
+	if f.beforeQueue != nil && len(f.beforeQueue) > 0 {
+		for _, item := range f.beforeQueue {
+			item()
+		}
+	}
 	if f.workers != nil && len(f.workers) > 0 {
 		f.wg.Add(len(f.workers))
 		for _, work := range f.workers {
@@ -48,6 +58,7 @@ func (f *Future) Do() {
 			go func() {
 				defer f.wg.Done()
 				item()
+				//f.wg.Done()
 			}()
 		}
 		f.wg.Wait()

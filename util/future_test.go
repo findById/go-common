@@ -7,7 +7,13 @@ import (
 )
 
 func TestNewFuture(t *testing.T) {
-	NewFuture().ThenAll(func() {
+	NewFuture().Then(func() {
+		time.Sleep(time.Millisecond * 1000)
+		log.Println("before then 1")
+	}).Then(func() {
+		time.Sleep(time.Millisecond * 1000)
+		log.Println("before then 2")
+	}).ThenAll(func() {
 		log.Println("all 1-1")
 		time.Sleep(time.Millisecond * 100)
 		log.Println("all 1-2")
@@ -26,7 +32,7 @@ func TestNewFuture(t *testing.T) {
 		time.Sleep(time.Millisecond * 100)
 		log.Println("then 2")
 	}).Then(func() {
-		time.Sleep(time.Millisecond * 10)
+		time.Sleep(time.Millisecond * 1000)
 		log.Println("then 3")
 	}).Do()
 }
