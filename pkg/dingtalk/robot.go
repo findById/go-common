@@ -33,7 +33,7 @@ func NewRobot(token, secret string, debug bool) *Robot {
 	}
 }
 
-func hmacSha256(message string, secret string) string {
+func (robot *Robot) hmacSha256(message string, secret string) string {
 	key := []byte(secret)
 	h := hmac.New(sha256.New, key)
 	h.Write([]byte(message))
@@ -44,7 +44,7 @@ func (robot *Robot) sendRobotMessage(message string) error {
 	var url string
 	if robot.secret != "" {
 		ts := time.Now().UnixNano() / 1e6
-		sign := hmacSha256(fmt.Sprint(ts, "\n", robot.secret), robot.secret)
+		sign := robot.hmacSha256(fmt.Sprint(ts, "\n", robot.secret), robot.secret)
 		temp := fmt.Sprintf("&timestamp=%v&sign=%v", ts, sign)
 		url = fmt.Sprint(RobotSendAPI, robot.token, temp)
 	} else {
@@ -82,7 +82,7 @@ func (robot *Robot) SendTextMessage(data map[string]string) error {
 			}
 		}`
 		msg = fmt.Sprintf(msg, content, true)
-	} else {
+	} else if at != "" {
 		msg = `{
 			"msgtype":"text",
 			"text":{
@@ -95,6 +95,14 @@ func (robot *Robot) SendTextMessage(data map[string]string) error {
 		}`
 		mobiles := fmt.Sprintf(`["%v"]`, strings.Join(strings.Split(at, ","), `","`)) // (1,1) to (["1","1"])
 		msg = fmt.Sprintf(msg, content, mobiles)
+	} else {
+		msg = `{
+			"msgtype":"text",
+			"text":{
+				"content":"%v"
+			}
+		}`
+		msg = fmt.Sprintf(msg, content)
 	}
 	if !robot.debug {
 		err := robot.sendRobotMessage(msg)
@@ -125,7 +133,7 @@ func (robot *Robot) SendMarkdownMessage(data map[string]string) error {
 			}
 		}`
 		msg = fmt.Sprintf(msg, title, content, true)
-	} else {
+	} else if at != "" {
 		msg = `{
 			"msgtype":"markdown",
 			"title":"%v",
@@ -139,6 +147,15 @@ func (robot *Robot) SendMarkdownMessage(data map[string]string) error {
 		}`
 		mobiles := fmt.Sprintf(`["%v"]`, strings.Join(strings.Split(at, ","), `","`)) // (1,1) to (["1","1"])
 		msg = fmt.Sprintf(msg, title, content, mobiles)
+	} else {
+		msg = `{
+			"msgtype":"markdown",
+			"title":"%v",
+			"text":{
+				"content":"%v"
+			}
+		}`
+		msg = fmt.Sprintf(msg, title, content)
 	}
 	if !robot.debug {
 		err := robot.sendRobotMessage(msg)
