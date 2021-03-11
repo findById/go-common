@@ -40,7 +40,7 @@ func (robot *Robot) hmacSha256(message string, secret string) string {
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
 }
 
-func (robot *Robot) sendRobotMessage(message string) error {
+func (robot *Robot) SendRobotMessage(message string) error {
 	var url string
 	if robot.secret != "" {
 		ts := time.Now().UnixNano() / 1e6
@@ -105,7 +105,7 @@ func (robot *Robot) SendTextMessage(data map[string]string) error {
 		msg = fmt.Sprintf(msg, content)
 	}
 	if !robot.debug {
-		err := robot.sendRobotMessage(msg)
+		err := robot.SendRobotMessage(msg)
 		if err != nil {
 			return err
 		}
@@ -158,7 +158,7 @@ func (robot *Robot) SendMarkdownMessage(data map[string]string) error {
 		msg = fmt.Sprintf(msg, title, content)
 	}
 	if !robot.debug {
-		err := robot.sendRobotMessage(msg)
+		err := robot.SendRobotMessage(msg)
 		if err != nil {
 			return err
 		}
